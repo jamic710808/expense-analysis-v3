@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>企業費用分析 V3 互動式儀表板</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --g1: rgba(30, 41, 59, .75);
+            --gb: rgba(255, 255, 255, .09);
+            --p: #6366f1;
+            --a: #10b981;
+            --w: #f59e0b;
+            --d: #ef4444;
+            --t: #f1f5f9;
+            --m: #94a3b8
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--t);
+            font-family: system-ui, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, .12), transparent 30%), radial-gradient(circle at 85% 20%, rgba(16, 185, 129, .12), transparent 30%);
+            background-attachment: fixed
+        }
+
+        .gl {
+            background: var(--g1);
+            backdrop-filter: blur(14px);
+            border: 1px solid var(--gb);
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, .3)
+        }
+
+        #sb {
+            width: 252px;
+            display: flex;
+            flex-direction: column;
+            padding: 1.25rem .875rem;
+            gap: .3rem;
+            overflow-y: auto;
+            flex-shrink: 0;
+            margin: .875rem 0 .875rem .875rem
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            padding: .5rem .5rem 1.25rem
+        }
+
+        .logo-ic {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--p), #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0
+        }
+
+        .logo h1 {
+            font-size: .9rem;
+            font-weight: 700;
+            line-height: 1.3
+        }
+
+        .logo p {
+            font-size: .68rem;
+            color: var(--m)
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .7rem .875rem;
+            border-radius: 10px;
+            color: var(--m);
+            cursor: pointer;
+            transition: all .25s;
+            font-size: .8rem;
+            font-weight: 500;
+            border: 1px solid transparent
+        }
+
+        .nav:hover {
+            background: rgba(255, 255, 255, .05);
+            color: var(--t)
+        }
+
+        .nav.on {
+            background: rgba(99, 102, 241, .18);
+            border-color: rgba(99, 102, 241, .35);
+            color: var(--p)
+        }
+
+        .sep {
+            font-size: .62rem;
+            color: var(--m);
+            padding: .6rem .875rem .2rem;
+            text-transform: uppercase;
+            letter-spacing: .08em
+        }
+
+        .upbx {
+            margin-top: auto;
+            padding-top: .75rem;
+            border-top: 1px solid var(--gb)
+        }
+
+        .upbtn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            padding: .7rem;
+            border: 1px dashed var(--gb);
+            border-radius: 10px;
+            color: var(--m);
+            cursor: pointer;
+            font-size: .78rem;
+            transition: all .25s;
+            width: 100%;
+            background: transparent;
+            position: relative
+        }
+
+        .upbtn:hover {
+            border-color: var(--p);
+            color: var(--p);
+            background: rgba(99, 102, 241, .08)
+        }
+
+        .upbtn input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            left: 0;
+            top: 0
+        }
+
+        #mc {
+            flex: 1;
+            padding: .875rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: .875rem;
+            min-width: 0
+        }
+
+        .hdr {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0
+        }
+
+        .hdr h2 {
+            font-size: 1.35rem;
+            font-weight: 700
+        }
+
+        .hdr p {
+            font-size: .78rem;
+            color: var(--m);
+            margin-top: .15rem
+        }
+
+        .tag {
+            background: var(--g1);
+            border: 1px solid var(--gb);
+            border-radius: 8px;
+            padding: .35rem .8rem;
+            font-size: .75rem;
+            color: var(--m);
+            cursor: pointer
+        }
+
+        .pg {
+            display: none;
+            flex-direction: column;
+            gap: .875rem;
+            animation: fi .3s ease
+        }
+
+        .pg.on {
+            display: flex
+        }
+
+        @keyframes fi {
+            from {
+                opacity: 0;
+                transform: translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .grid {
+            display: grid;
+            gap: .875rem
+        }
+
+        .c4 {
+            grid-template-columns: repeat(4, 1fr)
+        }
+
+        .c3 {
+            grid-template-columns: repeat(3, 1fr)
+        }
+
+        .c2 {
+            grid-template-columns: 1fr 1fr
+        }
+
+        .c21 {
+            grid-template-columns: 2fr 1fr
+        }
+
+        .c12 {
+            grid-template-columns: 1fr 2fr
+        }
+
+        .kpi {
+            padding: 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: .3rem
+        }
+
+        .kpi-lbl {
+            font-size: .7rem;
+            color: var(--m);
+            text-transform: uppercase;
+            letter-spacing: .06em
+        }
+
+        .kpi-val {
+            font-size: 1.6rem;
+            font-weight: 700
+        }
+
+        .kpi-sub {
+            font-size: .75rem;
+            display: flex;
+            align-items: center;
+            gap: .2rem
+        }
+
+        .up {
+            color: var(--d)
+        }
+
+        .dn {
+            color: var(--a)
+        }
+
+        .neu {
+            color: var(--m)
+        }
+
+        .card {
+            padding: 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: .625rem
+        }
+
+        .card h3 {
+            font-size: .875rem;
+            font-weight: 600
+        }
+
+        .ch {
+            position: relative;
+            height: 270px
+        }
+
+        .ch2 {
+            position: relative;
+            height: 230px
+        }
+
+        .ch3 {
+            position: relative;
+            height: 320px
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .78rem
+        }
+
+        th {
+            text-align: left;
+            padding: .45rem .6rem;
+            color: var(--m);
+            border-bottom: 1px solid var(--gb);
+            font-weight: 500
+        }
+
+        td {
+            padding: .45rem .6rem;
+            border-bottom: 1px solid rgba(255, 255, 255, .04)
+        }
+
+        .badge {
+            padding: .18rem .45rem;
+            border-radius: 5px;
+            font-size: .7rem;
+            font-weight: 600;
+            display: inline-block
+        }
+
+        .b-r {
+            background: rgba(239, 68, 68, .2);
+            color: #fca5a5
+        }
+
+        .b-w {
+            background: rgba(245, 158, 11, .2);
+            color: #fcd34d
+        }
+
+        .b-g {
+            background: rgba(16, 185, 129, .2);
+            color: #6ee7b7
+        }
+
+        .prog-row {
+            display: flex;
+            align-items: center;
+            gap: .625rem;
+            font-size: .78rem;
+            margin-bottom: .4rem
+        }
+
+        .prog-lbl {
+            width: 75px;
+            flex-shrink: 0;
+            color: var(--m);
+            font-size: .72rem
+        }
+
+        .prog-bar {
+            flex: 1;
+            height: 7px;
+            background: rgba(255, 255, 255, .08);
+            border-radius: 4px;
+            overflow: hidden
+        }
+
+        .prog-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width .6s ease
+        }
+
+        .prog-val {
+            width: 38px;
+            text-align: right;
+            font-size: .72rem;
+            flex-shrink: 0
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: .875rem;
+            margin-bottom: .5rem
+        }
+
+        .slider-lbl {
+            width: 85px;
+            font-size: .78rem;
+            color: var(--m)
+        }
+
+        input[type=range] {
+            flex: 1;
+            accent-color: var(--p)
+        }
+
+        .slider-val {
+            width: 52px;
+            text-align: right;
+            font-size: .78rem;
+            font-weight: 600
+        }
+
+        .sim-box {
+            background: rgba(99, 102, 241, .1);
+            border: 1px solid rgba(99, 102, 241, .3);
+            border-radius: 10px;
+            padding: 1rem
+        }
+
+        .dax-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: .75rem
+        }
+
+        .dx {
+            background: rgba(15, 23, 42, .6);
+            border: 1px solid var(--gb);
+            border-radius: 10px;
+            padding: .875rem
+        }
+
+        .dx h4 {
+            font-size: .8rem;
+            font-weight: 600;
+            margin-bottom: .5rem
+        }
+
+        pre {
+            background: rgba(0, 0, 0, .5);
+            padding: .5rem;
+            border-radius: 7px;
+            font-size: .7rem;
+            overflow-x: auto;
+            color: #86efac;
+            line-height: 1.55
+        }
+
+        .filters-area {
+            display: flex;
+            gap: .875rem;
+            flex-wrap: wrap;
+            padding: .875rem;
+            background: rgba(255, 255, 255, .03);
+            border-radius: 12px;
+            border: 1px solid var(--gb);
+            margin-bottom: .25rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: .35rem;
+            min-width: 140px;
+        }
+
+        .filter-group label {
+            font-size: .68rem;
+            color: var(--m);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .filter-group select {
+            background: var(--bg);
+            border: 1px solid var(--gb);
+            border-radius: 8px;
+            color: var(--t);
+            padding: .45rem .6rem;
+            font-size: .8rem;
+            outline: none;
+            cursor: pointer;
+            transition: border-color .2s;
+        }
+
+        .filter-group select:focus {
+            border-color: var(--p);
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .15);
+            border-radius: 3px
+        }
+    </style>
+</head>
+
+<body>
+    <aside id="sb" class="gl">
+        <div class="logo">
+            <div class="logo-ic">💰</div>
+            <div>
+                <h1>企業費用分析</h1>
+                <p>Expense Analytics V2</p>
+            </div>
+        </div>
+        <div class="sep">主要分析</div>
+        <div class="nav on" data-pg="p0">🏠 總覽儀表板</div>
+        <div class="nav" data-pg="p1">📈 費用趨勢分析</div>
+        <div class="nav" data-pg="p2">⚖️ 費用執行比較</div>
+        <div class="nav" data-pg="p3">🎯 預算達成率追蹤</div>
+        <div class="nav" data-pg="p4">🗂️ 費用結構明細</div>
+        <div class="sep">進階分析</div>
+        <div class="nav" data-pg="p5">🏢 部門與專案分攤</div>
+        <div class="nav" data-pg="p6">🚨 異常偵測與預警</div>
+        <div class="nav" data-pg="p7">🔮 情境模擬分析</div>
+        <div class="nav" data-pg="p8">📐 成本效益分析</div>
+        <div class="nav" data-pg="p9">💡 DAX 公式參考庫</div>
+        <div class="upbx">
+            <button class="upbtn">📥 上傳 CSV / Excel<input type="file" id="fu" accept=".csv,.xlsx,.xls"></button>
+            <p style="text-align:center;font-size:.68rem;color:var(--m);margin-top:.4rem" id="uinfo">載入預設範例資料…</p>
+            <button class="tag" style="width:100%;margin-top:.4rem;text-align:center;color:var(--w)"
+                onclick="resetData()">↺ 重設為範例資料</button>
+        </div>
+    </aside>
+    <main id="mc">
+        <div class="hdr">
+            <div>
+                <h2 id="ptitle">總覽儀表板</h2>
+                <p id="psub">即時監控企業整體費用與預算執行概況</p>
+            </div>
+            <div style="display:flex;gap:.4rem"><span class="tag">📅 2026 年度</span><span class="tag"
+                    id="dcount">-</span></div>
+        </div>
+
+        <div class="filters-area gl">
+            <div class="filter-group">
+                <label>費用部門</label>
+                <select id="filter-dept" onchange="runFilters()">
+                    <option value="all">全部部門</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>費用科目</label>
+                <select id="filter-cat" onchange="runFilters()">
+                    <option value="all">全部科目</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>費用年度</label>
+                <select id="filter-year" onchange="runFilters()">
+                    <option value="all">全部年度</option>
+                </select>
+            </div>
+            <div style="margin-left:auto; display:flex; align-items:flex-end;">
+                <button class="tag" style="background:rgba(99,102,241,.1); color:var(--p); border-color:rgba(99,102,241,.2)" onclick="clearFilters()">✨ 清除篩選</button>
+            </div>
+        </div>
+        <!-- P0 總覽 -->
+        <div id="p0" class="pg on">
+            <div class="grid c4">
+                <div class="gl kpi">
+                    <div class="kpi-lbl">總實際費用</div>
+                    <div class="kpi-val" id="k0">-</div>
+                    <div class="kpi-sub up" id="k0s">-</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">年度預算總額</div>
+                    <div class="kpi-val" id="k1">-</div>
+                    <div class="kpi-sub neu">📋 本年核准預算</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">預算使用率</div>
+                    <div class="kpi-val" id="k2">-</div>
+                    <div class="kpi-sub" id="k2s">-</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">最大費用類別</div>
+                    <div class="kpi-val" style="font-size:.95rem;margin-top:.3rem" id="k3">-</div>
+                    <div class="kpi-sub neu">🔝 佔比最高科目</div>
+                </div>
+            </div>
+            <div class="grid c2">
+                <div class="gl card">
+                    <h3>📊 月份費用：實際 vs 預算</h3>
+                    <div class="ch"><canvas id="c00"></canvas></div>
+                </div>
+                <div class="gl card">
+                    <h3>🥧 各類別費用佔比</h3>
+                    <div class="ch"><canvas id="c01"></canvas></div>
+                </div>
+            </div>
+            <div class="grid c3">
+                <div class="gl kpi">
+                    <div class="kpi-lbl">最高超支科目</div>
+                    <div class="kpi-val" style="font-size:.95rem;margin-top:.25rem" id="k4">-</div>
+                    <div class="kpi-sub up" id="k4s">-</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">超支項目數</div>
+                    <div class="kpi-val" id="k5">-</div>
+                    <div class="kpi-sub up">項目需關注</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">平均月費用</div>
+                    <div class="kpi-val" id="k6">-</div>
+                    <div class="kpi-sub neu">月均消耗</div>
+                </div>
+            </div>
+        </div>
+        <!-- P1 趨勢 -->
+        <div id="p1" class="pg">
+            <div class="gl card">
+                <h3>📈 月費用趨勢：當月實際 + 累計曲線</h3>
+                <div class="ch3"><canvas id="c10"></canvas></div>
+            </div>
+            <div class="grid c2">
+                <div class="gl card">
+                    <h3>📉 月環比增長率 MoM(%)</h3>
+                    <div class="ch"><canvas id="c11"></canvas></div>
+                </div>
+                <div class="gl card" style="background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.2)">
+                    <h3 style="color:var(--a)">🔍 趨勢洞察</h3>
+                    <ul id="t-ins" style="padding-left:1rem;font-size:.82rem;color:#a7f3d0;line-height:1.8"></ul>
+                </div>
+            </div>
+        </div>
+        <!-- P2 執行比較 -->
+        <div id="p2" class="pg">
+            <div class="grid c21">
+                <div class="gl card">
+                    <h3>⚖️ 各費用科目：實際 vs 預算</h3>
+                    <div class="ch3"><canvas id="c20"></canvas></div>
+                </div>
+                <div class="gl card">
+                    <h3>🔴 超支 Top 5</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>科目</th>
+                                <th>超支額</th>
+                                <th>幅度</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ov-tb"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="gl card">
+                <h3>🌊 費用差異瀑布分析（各科目相對預算增減貢獻）</h3>
+                <div class="ch"><canvas id="c21"></canvas></div>
+            </div>
+        </div>
+        <!-- P3 預算追蹤 -->
+        <div id="p3" class="pg">
+            <div class="grid c3">
+                <div class="gl card" style="align-items:center;text-align:center">
+                    <h3>🎯 年度預算儀表</h3>
+                    <div style="width:170px;height:170px"><canvas id="c30"></canvas></div>
+                    <div id="g-val" style="font-size:1.5rem;font-weight:700;margin-top:.4rem">-</div>
+                    <div style="font-size:.72rem;color:var(--m)">費用 / 預算</div>
+                </div>
+                <div class="gl card" style="grid-column:span 2">
+                    <h3>🏢 各部門預算達成率比較</h3>
+                    <div class="ch2"><canvas id="c31"></canvas></div>
+                </div>
+            </div>
+            <div class="gl card">
+                <h3>📊 各費用科目預算進度條</h3>
+                <div id="prog-list"></div>
+            </div>
+        </div>
+        <!-- P4 費用結構 -->
+        <div id="p4" class="pg">
+            <div class="grid c2">
+                <div class="gl card">
+                    <h3>🗂️ 費用類別 Donut 圖</h3>
+                    <div class="ch"><canvas id="c40"></canvas></div>
+                </div>
+                <div class="gl card">
+                    <h3>🌐 各部門費用 Polar 圖</h3>
+                    <div class="ch"><canvas id="c41"></canvas></div>
+                </div>
+            </div>
+            <div class="gl card">
+                <h3>📊 各月費用科目堆疊結構（月度費用組成追蹤）</h3>
+                <div class="ch"><canvas id="c42"></canvas></div>
+            </div>
+        </div>
+        <!-- P5 部門專案 -->
+        <div id="p5" class="pg">
+            <div class="gl card">
+                <h3>🏢 各部門各專案費用投入（水平堆疊圖）</h3>
+                <div class="ch3"><canvas id="c50"></canvas></div>
+            </div>
+            <div class="grid c2">
+                <div class="gl card">
+                    <h3>📋 部門費用明細表</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>部門</th>
+                                <th>實際費用</th>
+                                <th>預算</th>
+                                <th>達成率</th>
+                                <th>狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dept-tb"></tbody>
+                    </table>
+                </div>
+                <div class="gl card">
+                    <h3>🗃️ 專案費用 Top 8</h3>
+                    <div class="ch2"><canvas id="c51"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <!-- P6 異常偵測 -->
+        <div id="p6" class="pg">
+            <div class="gl card" style="border-color:rgba(239,68,68,.3)">
+                <h3 style="color:#fca5a5">🚨 AI 異常評分與超支預警系統</h3>
+                <p style="font-size:.78rem;color:var(--m);margin-bottom:.625rem">自動偵測超出預算15%以上或MoM增長超過30%的項目，依嚴重度分三級標示。
+                </p>
+                <div style="overflow-x:auto">
+                    <table id="anom-tb">
+                        <thead>
+                            <tr>
+                                <th>月份</th>
+                                <th>部門</th>
+                                <th>科目</th>
+                                <th>實際金額</th>
+                                <th>預算</th>
+                                <th>差異率</th>
+                                <th>嚴重度</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="grid c3">
+                <div class="gl kpi">
+                    <div class="kpi-lbl">🔴 嚴重 (>25%)</div>
+                    <div class="kpi-val" id="a0" style="color:var(--d)">-</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">🟡 警告 (10-25%)</div>
+                    <div class="kpi-val" id="a1" style="color:var(--w)">-</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">🟢 輕微 (&lt;10%)</div>
+                    <div class="kpi-val" id="a2" style="color:var(--a)">-</div>
+                </div>
+            </div>
+        </div>
+        <!-- P7 情境模擬 -->
+        <div id="p7" class="pg">
+            <div class="gl card">
+                <h3>🔮 What-If 情境模擬 — 費用調整影響預測</h3>
+                <p style="font-size:.78rem;color:var(--m);margin-bottom:.625rem">拖曳滑桿模擬各費用科目調整幅度，即時計算對總費用與預算達成率的影響。</p>
+                <div id="sliders"></div>
+            </div>
+            <div class="grid c2">
+                <div class="sim-box gl">
+                    <h3 style="margin-bottom:.75rem">📊 模擬結果</h3>
+                    <div class="grid c2" style="gap:.625rem">
+                        <div>
+                            <div class="kpi-lbl">模擬後總費用</div>
+                            <div class="kpi-val" id="sim-tot">-</div>
+                        </div>
+                        <div>
+                            <div class="kpi-lbl">vs 實際費用</div>
+                            <div class="kpi-val" id="sim-diff">-</div>
+                        </div>
+                        <div>
+                            <div class="kpi-lbl">模擬預算達成率</div>
+                            <div class="kpi-val" id="sim-rate">-</div>
+                        </div>
+                        <div>
+                            <div class="kpi-lbl">預算餘裕</div>
+                            <div class="kpi-val" id="sim-rem">-</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="gl card">
+                    <h3>📈 模擬費用 vs 實際對比</h3>
+                    <div class="ch2"><canvas id="c70"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <!-- P8 成本效益 -->
+        <div id="p8" class="pg">
+            <div class="grid c4">
+                <div class="gl kpi">
+                    <div class="kpi-lbl">費用 CAGR</div>
+                    <div class="kpi-val" id="r0">-</div>
+                    <div class="kpi-sub neu">年化成長率</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">人均費用</div>
+                    <div class="kpi-val" id="r1">-</div>
+                    <div class="kpi-sub neu">每人平均</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">費用集中度</div>
+                    <div class="kpi-val" id="r2">-</div>
+                    <div class="kpi-sub neu">最大類別佔比</div>
+                </div>
+                <div class="gl kpi">
+                    <div class="kpi-lbl">月均費用</div>
+                    <div class="kpi-val" id="r3">-</div>
+                    <div class="kpi-sub neu">12月滾動均值</div>
+                </div>
+            </div>
+            <div class="grid c2">
+                <div class="gl card">
+                    <h3>📐 各月人均費用效率</h3>
+                    <div class="ch"><canvas id="c80"></canvas></div>
+                </div>
+                <div class="gl card">
+                    <h3>🎯 費用科目效益雷達</h3>
+                    <div class="ch"><canvas id="c81"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <!-- P9 DAX 公式庫 -->
+        <div id="p9" class="pg">
+            <div class="gl card">
+                <h3 style="color:var(--p);font-size:1rem;margin-bottom:.75rem">💡 Power BI 費用分析 DAX 完整公式參考庫</h3>
+                <div class="dax-grid">
+                    <div class="dx">
+                        <h4 style="color:var(--a)">① 基礎度量值</h4>
+                        <pre>Total_Expense = SUM(Expense[Actual_Amount])
+Budget_Expense = SUM(Expense[Budget_Amount])
+Budget_Remain = [Budget_Expense]-[Total_Expense]</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">所有計算的基礎。Budget_Remain為剩餘預算空間。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:var(--w)">② 差異與達成率</h4>
+                        <pre>Variance = [Total_Expense] - [Budget_Expense]
+Achieve_Rate = DIVIDE([Total_Expense],[Budget_Expense],0)
+Overspend_Pct = [Achieve_Rate] - 1</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">Achieve_Rate > 1 =
+                            超支；Overspend_Pct為超支百分比。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:var(--p)">③ 時間智慧 YTD/YoY</h4>
+                        <pre>Expense_YTD =
+  TOTALYTD([Total_Expense],'Date'[Date])
+Expense_LY =
+  CALCULATE([Total_Expense],
+    SAMEPERIODLASTYEAR('Date'[Date]))
+YoY_Pct = DIVIDE([Total_Expense]-[Expense_LY],
+                 [Expense_LY],0)</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">YTD累計與年度同比增長率計算。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:#f472b6">④ 環比 MoM</h4>
+                        <pre>Expense_LM =
+  CALCULATE([Total_Expense],
+    DATEADD('Date'[Date],-1,MONTH))
+MoM_Pct = DIVIDE([Total_Expense]-[Expense_LM],
+                 [Expense_LM],0)
+MoM_Var = [Total_Expense] - [Expense_LM]</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">偵測月度費用突發性異常波動。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:var(--a)">⑤ 排名與佔比</h4>
+                        <pre>Pct_of_Total =
+  DIVIDE([Total_Expense],
+    CALCULATE([Total_Expense],
+      ALL(Expense_Category)),0)
+Rank_Dept =
+  RANKX(ALL(Department),[Total_Expense],,DESC)</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">找出費用集中度最高的科目與部門。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:var(--w)">⑥ 超支分級</h4>
+                        <pre>Overspend_Level =
+  VAR R = [Achieve_Rate]
+  RETURN
+  IF(R>1.25,"🔴 嚴重",
+  IF(R>1.10,"🟡 警告",
+  IF(R>1.00,"🟢 輕微","✅ 正常")))</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">自動三級超支預警，對應異常偵測頁面。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:var(--p)">⑦ 滾動均值</h4>
+                        <pre>Rolling3M =
+  AVERAGEX(DATESINPERIOD('Date'[Date],
+    LASTDATE('Date'[Date]),-3,MONTH),
+    [Total_Expense])
+Rolling12M =
+  AVERAGEX(DATESINPERIOD('Date'[Date],
+    LASTDATE('Date'[Date]),-12,MONTH),
+    [Total_Expense])</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">消除季節性，觀察費用長期趨勢。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:#f472b6">⑧ 人均費用</h4>
+                        <pre>Per_Head =
+  DIVIDE([Total_Expense],
+    SUM(Expense[Employee_Count]),0)
+Dept_Efficiency =
+  DIVIDE([Per_Head],
+    CALCULATE([Per_Head],ALL(Department)),0)</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">評估各部門人力資源使用效率指標。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:var(--a)">⑨ 費用集中度</h4>
+                        <pre>Concentration =
+  VAR MaxCat = CALCULATE(MAX([Total_Expense]),
+    ALL(Expense_Category))
+  RETURN DIVIDE(MaxCat,
+    CALCULATE([Total_Expense],
+      ALL(Expense_Category)),0)</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">最大費用科目的集中度，>50%需關注。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:var(--w)">⑩ 前10大帕累托</h4>
+                        <pre>Top10_Pct =
+  VAR T = CALCULATE([Total_Expense],
+    TOPN(10,ALL(Expense_Category),
+         [Total_Expense],DESC))
+  VAR A = CALCULATE([Total_Expense],
+    ALL(Expense_Category))
+  RETURN DIVIDE(T,A,0)</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">80/20費用集中分析，支援資源優化決策。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:var(--p)">⑪ 動態What-If參數</h4>
+                        <pre>Simulated_Expense =
+  [Total_Expense] * (1 + SELECTEDVALUE(
+    Params[AdjustPct],0))
+Dynamic_Metric =
+  SWITCH(SELECTEDVALUE(Params[Metric]),
+    "費用",[Total_Expense],
+    "預算",[Budget_Expense],
+    "差異",[Variance])</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">情境模擬必須，支援What-If分析頁面。</p>
+                    </div>
+                    <div class="dx">
+                        <h4 style="color:#f472b6">⑫ CAGR複合增長率</h4>
+                        <pre>Expense_CAGR =
+  VAR S = CALCULATE([Total_Expense],
+    FIRSTDATE('Date'[Date]))
+  VAR E = CALCULATE([Total_Expense],
+    LASTDATE('Date'[Date]))
+  VAR N = DATEDIFF(
+    FIRSTDATE('Date'[Date]),
+    LASTDATE('Date'[Date]),YEAR)
+  RETURN POWER(DIVIDE(E,S,0),
+    DIVIDE(1,MAX(N,1),0))-1</pre>
+                        <p style="font-size:.7rem;color:var(--m);margin-top:.4rem">費用的年化複合增長率，用於長期規劃。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script id="main-script">
+        // === 全域設定 ===
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = 'system-ui,sans-serif';
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15,23,42,.92)';
+        Chart.defaults.plugins.tooltip.padding = 10;
+        Chart.defaults.plugins.tooltip.cornerRadius = 8;
+        const charts = {};
+        let rawData = [];
+        let filteredData = [];
+        let filterState = { dept: 'all', cat: 'all', year: 'all' };
+
+        const CLR = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#06b6d4'];
+        const fmt = v => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(v);
+        const fmtK = v => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v.toFixed(0);
+        const pageInfo = { p0: ['總覽儀表板', '即時監控企業整體費用與預算執行概況'], p1: ['費用趨勢分析', '月度費用走勢、累計變化及環比分析'], p2: ['費用執行比較', '實際費用 vs 預算比對、超支瀑布分析'], p3: ['預算達成率追蹤', '部門與科目預算消耗進度監控'], p4: ['費用結構明細', '費用組成結構視覺化分析'], p5: ['部門與專案分攤', '各單位費用資源分配矩陣'], p6: ['異常偵測與預警', 'AI 自動分級超支預警系統'], p7: ['情境模擬分析', 'What-If 費用調整影響預測'], p8: ['成本效益分析', 'CAGR、人均費用、效率指標'], p9: ['DAX 公式參考庫', 'Power BI 費用建模完整公式手冊'] };
+
+        // === 預設範例資料 ===
+        const defaultData = [
+            { Date: '2026-01-05', Category: '薪資費用', Department: '研發部', Project: '基礎建設更新', Actual_Amount: 1200000, Budget_Amount: 1200000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-01-08', Category: '行銷推廣', Department: '業務部', Project: '春季促銷檔期', Actual_Amount: 450000, Budget_Amount: 400000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-01-10', Category: '租金支出', Department: '行政部', Project: '總部辦公室', Actual_Amount: 200000, Budget_Amount: 200000, Region: '北區', Employee_Count: 80 },
+            { Date: '2026-01-15', Category: 'IT軟體授權', Department: '研發部', Project: '資安升級計畫', Actual_Amount: 150000, Budget_Amount: 120000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-01-25', Category: '教育訓練', Department: '人資部', Project: '新人培訓Q1', Actual_Amount: 60000, Budget_Amount: 80000, Region: '北區', Employee_Count: 10 },
+            { Date: '2026-02-01', Category: '薪資費用', Department: '業務部', Project: '一般薪資', Actual_Amount: 850000, Budget_Amount: 800000, Region: '全區', Employee_Count: 32 },
+            { Date: '2026-02-05', Category: '行銷推廣', Department: '業務部', Project: '品牌大使招募', Actual_Amount: 320000, Budget_Amount: 300000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-02-10', Category: '差旅費', Department: '業務部', Project: '新市場開發', Actual_Amount: 120000, Budget_Amount: 150000, Region: '南區', Employee_Count: 12 },
+            { Date: '2026-02-18', Category: 'IT設備採購', Department: '行政部', Project: '伺服器汰換', Actual_Amount: 250000, Budget_Amount: 200000, Region: '北區', Employee_Count: 80 },
+            { Date: '2026-02-22', Category: '教育訓練', Department: '人資部', Project: '主管領導力訓練', Actual_Amount: 90000, Budget_Amount: 80000, Region: '北區', Employee_Count: 10 },
+            { Date: '2026-03-01', Category: '薪資費用', Department: '研發部', Project: '新產品研發', Actual_Amount: 1300000, Budget_Amount: 1250000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-03-10', Category: '行銷推廣', Department: '業務部', Project: '春展參展費', Actual_Amount: 380000, Budget_Amount: 350000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-03-15', Category: '交際費', Department: '業務部', Project: '關鍵客戶維繫', Actual_Amount: 80000, Budget_Amount: 60000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-03-20', Category: '薪資費用', Department: '財務部', Project: '季度外包', Actual_Amount: 350000, Budget_Amount: 300000, Region: '北區', Employee_Count: 18 },
+            { Date: '2026-04-01', Category: '行銷推廣', Department: '業務部', Project: '夏季展覽籌備', Actual_Amount: 600000, Budget_Amount: 500000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-04-05', Category: 'IT設備採購', Department: '行政部', Project: '筆電全面更新', Actual_Amount: 400000, Budget_Amount: 450000, Region: '北區', Employee_Count: 80 },
+            { Date: '2026-04-10', Category: '薪資費用', Department: '研發部', Project: '基礎建設更新', Actual_Amount: 1250000, Budget_Amount: 1200000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-04-20', Category: '教育訓練', Department: '研發部', Project: 'AI技術深化培訓', Actual_Amount: 120000, Budget_Amount: 100000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-05-01', Category: '薪資費用', Department: '業務部', Project: '一般薪資', Actual_Amount: 880000, Budget_Amount: 800000, Region: '全區', Employee_Count: 32 },
+            { Date: '2026-05-05', Category: '行銷推廣', Department: '業務部', Project: '線上廣告投放', Actual_Amount: 550000, Budget_Amount: 600000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-05-10', Category: '差旅費', Department: '業務部', Project: '海外分公司視察', Actual_Amount: 250000, Budget_Amount: 200000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-06-01', Category: '薪資費用', Department: '財務部', Project: '年度結算外包', Actual_Amount: 380000, Budget_Amount: 300000, Region: '北區', Employee_Count: 18 },
+            { Date: '2026-06-05', Category: '教育訓練', Department: '研發部', Project: 'AI技能實戰培訓', Actual_Amount: 180000, Budget_Amount: 150000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-06-15', Category: '行銷推廣', Department: '業務部', Project: '年中促銷廣告', Actual_Amount: 520000, Budget_Amount: 500000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-06-25', Category: 'IT設備採購', Department: '研發部', Project: 'GPU伺服器擴充', Actual_Amount: 800000, Budget_Amount: 700000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-07-01', Category: '薪資費用', Department: '研發部', Project: '新產品研發', Actual_Amount: 1350000, Budget_Amount: 1250000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-07-05', Category: '行銷推廣', Department: '業務部', Project: '下半年品牌活動', Actual_Amount: 450000, Budget_Amount: 400000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-07-20', Category: 'IT軟體授權', Department: '研發部', Project: '安全稽核工具', Actual_Amount: 140000, Budget_Amount: 120000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-08-01', Category: '薪資費用', Department: '業務部', Project: '一般薪資', Actual_Amount: 900000, Budget_Amount: 850000, Region: '全區', Employee_Count: 32 },
+            { Date: '2026-08-20', Category: '差旅費', Department: '業務部', Project: '大陸市場評估', Actual_Amount: 350000, Budget_Amount: 300000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-08-25', Category: '交際費', Department: '業務部', Project: '年度夥伴晚宴', Actual_Amount: 120000, Budget_Amount: 100000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-09-01', Category: '薪資費用', Department: '研發部', Project: 'Q3衝刺項目', Actual_Amount: 1380000, Budget_Amount: 1300000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-09-05', Category: '行銷推廣', Department: '業務部', Project: '秋季上市活動', Actual_Amount: 680000, Budget_Amount: 600000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-09-25', Category: '差旅費', Department: '業務部', Project: '亞太峰會', Actual_Amount: 420000, Budget_Amount: 350000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-10-05', Category: '行銷推廣', Department: '業務部', Project: '雙十節大促', Actual_Amount: 750000, Budget_Amount: 700000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-10-15', Category: 'IT設備採購', Department: '研發部', Project: '年度設備更新', Actual_Amount: 550000, Budget_Amount: 500000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-10-01', Category: '薪資費用', Department: '財務部', Project: '年底稽核外包', Actual_Amount: 420000, Budget_Amount: 350000, Region: '北區', Employee_Count: 18 },
+            { Date: '2026-11-01', Category: '薪資費用', Department: '業務部', Project: '一般薪資', Actual_Amount: 920000, Budget_Amount: 880000, Region: '全區', Employee_Count: 32 },
+            { Date: '2026-11-05', Category: '行銷推廣', Department: '業務部', Project: '年終促銷活動', Actual_Amount: 850000, Budget_Amount: 800000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-11-20', Category: 'IT軟體授權', Department: '研發部', Project: '明年授權預付', Actual_Amount: 200000, Budget_Amount: 180000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-12-05', Category: '薪資費用', Department: '研發部', Project: '年終獎金與薪資', Actual_Amount: 1500000, Budget_Amount: 1400000, Region: '北區', Employee_Count: 45 },
+            { Date: '2026-12-10', Category: '行銷推廣', Department: '業務部', Project: '跨年品牌活動', Actual_Amount: 900000, Budget_Amount: 800000, Region: '全區', Employee_Count: 12 },
+            { Date: '2026-12-25', Category: 'IT設備採購', Department: '行政部', Project: '年度資產汰換', Actual_Amount: 320000, Budget_Amount: 300000, Region: '北區', Employee_Count: 80 },
+            { Date: '2026-12-28', Category: '交際費', Department: '業務部', Project: '年終尾牙', Actual_Amount: 250000, Budget_Amount: 200000, Region: '全區', Employee_Count: 32 }
+        ];
+
+        // === 程式開發工具：篩選器邏輯 ===
+        function initFilters(data) {
+            const depts = [...new Set(data.map(d => d.Department))].sort();
+            const cats = [...new Set(data.map(d => d.Category))].sort();
+            const years = [...new Set(data.map(d => new Date(d.Date).getFullYear()))].sort((a,b)=>b-a);
+
+            const dSelect = document.getElementById('filter-dept');
+            const cSelect = document.getElementById('filter-cat');
+            const ySelect = document.getElementById('filter-year');
+
+            // 清空並重設
+            dSelect.innerHTML = '<option value="all">全部部門</option>';
+            cSelect.innerHTML = '<option value="all">全部科目</option>';
+            ySelect.innerHTML = '<option value="all">全部年度</option>';
+
+            depts.forEach(d => dSelect.innerHTML += `<option value="${d}">${d}</option>`);
+            cats.forEach(c => cSelect.innerHTML += `<option value="${c}">${c}</option>`);
+            years.forEach(y => ySelect.innerHTML += `<option value="${y}">${y} 年</option>`);
+        }
+
+        function runFilters() {
+            filterState.dept = document.getElementById('filter-dept').value;
+            filterState.cat = document.getElementById('filter-cat').value;
+            filterState.year = document.getElementById('filter-year').value;
+
+            filteredData = rawData.filter(d => {
+                const matchDept = filterState.dept === 'all' || d.Department === filterState.dept;
+                const matchCat = filterState.cat === 'all' || d.Category === filterState.cat;
+                const matchYear = filterState.year === 'all' || new Date(d.Date).getFullYear().toString() === filterState.year;
+                return matchDept && matchCat && matchYear;
+            });
+
+            renderAll(filteredData);
+        }
+
+        function clearFilters() {
+            document.getElementById('filter-dept').value = 'all';
+            document.getElementById('filter-cat').value = 'all';
+            document.getElementById('filter-year').value = 'all';
+            runFilters();
+        }
+
+        // === 工具函式 ===
+        function aggBy(data, key, metric) {
+            const r = {};
+            data.forEach(d => {
+                let k = d[key] || '未知';
+                if (key === 'Date') k = new Date(d[key]).toISOString().substring(0, 7);
+                r[k] = (r[k] || 0) + Number(d[metric] || 0);
+            });
+            return r;
+        }
+        function mkChart(id, type, cfg, opts = {}) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (charts[id]) charts[id].destroy();
+            charts[id] = new Chart(el, { type, data: cfg, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { boxWidth: 12, padding: 10 } } }, autoSkip: true, ...opts } });
+        }
+
+        // === 導覽邏輯 ===
+        document.querySelectorAll('.nav').forEach(n => {
+            n.addEventListener('click', () => {
+                document.querySelectorAll('.nav').forEach(x => x.classList.remove('on'));
+                document.querySelectorAll('.pg').forEach(x => x.classList.remove('on'));
+                n.classList.add('on');
+                const pg = n.dataset.pg;
+                document.getElementById(pg).classList.add('on');
+                const [t, s] = pageInfo[pg] || ['', ''];
+                document.getElementById('ptitle').textContent = t;
+                document.getElementById('psub').textContent = s;
+            });
+        });
+
+        // === 主渲染函式 ===
+        function renderAll(data) {
+            const totalAct = data.reduce((s, r) => s + Number(r.Actual_Amount || 0), 0);
+            const totalBud = data.reduce((s, r) => s + Number(r.Budget_Amount || 0), 0);
+            const totalEmp = data.reduce((s, r) => s + Number(r.Employee_Count || 0), 0);
+            const budRate = (totalBud > 0 ? totalAct / totalBud : 0) * 100;
+            const catAct = aggBy(data, 'Category', 'Actual_Amount');
+            const catBud = aggBy(data, 'Category', 'Budget_Amount');
+            const catArr = Object.entries(catAct).sort((a, b) => b[1] - a[1]);
+            const deptAct = aggBy(data, 'Department', 'Actual_Amount');
+            const deptBud = aggBy(data, 'Department', 'Budget_Amount');
+            const depts = Object.keys(deptAct);
+            const monAct = aggBy(data, 'Date', 'Actual_Amount');
+            const monBud = aggBy(data, 'Date', 'Budget_Amount');
+            const months = Object.keys(monAct).sort();
+            const overspend = catArr.map(([cat, act]) => { const bud = catBud[cat] || 0; const d = act - bud; return { cat, act, bud, d, pct: bud > 0 ? d / bud * 100 : 0 }; }).filter(x => x.d > 0).sort((a, b) => b.d - a.d);
+
+            // P0 KPIs
+            document.getElementById('k0').textContent = fmt(totalAct);
+            document.getElementById('k0s').textContent = '佔預算 ' + budRate.toFixed(1) + '%';
+            document.getElementById('k1').textContent = fmt(totalBud);
+            document.getElementById('k2').textContent = budRate.toFixed(1) + '%';
+            const k2s = document.getElementById('k2s');
+            if (budRate > 100) { k2s.className = 'kpi-sub up'; k2s.textContent = '🔺 預算超支 ' + (budRate - 100).toFixed(1) + '%'; }
+            else { k2s.className = 'kpi-sub dn'; k2s.textContent = '✅ 控制在預算內'; }
+            document.getElementById('k3').textContent = catArr[0] ? catArr[0][0] : '-';
+            const topOver = overspend[0];
+            document.getElementById('k4').textContent = topOver ? topOver.cat : '-';
+            document.getElementById('k4s').textContent = topOver ? '超支 ' + topOver.pct.toFixed(1) + '%' : '無超支';
+            document.getElementById('k5').textContent = overspend.length;
+            document.getElementById('k6').textContent = fmt(months.length > 0 ? totalAct / months.length : 0);
+            document.getElementById('dcount').textContent = '資料 ' + data.length + ' 筆';
+            document.getElementById('uinfo').textContent = '✅ 已載入 ' + data.length + ' 筆資料';
+
+            // P0 圖表
+            mkChart('c00', 'bar', { labels: months, datasets: [{ label: '實際費用', data: months.map(m => monAct[m] || 0), backgroundColor: 'rgba(99,102,241,.8)', borderRadius: 4 }, { label: '預算', data: months.map(m => monBud[m] || 0), backgroundColor: 'rgba(148,163,184,.3)', borderRadius: 4 }] }, { plugins: { legend: { position: 'top' } } });
+            mkChart('c01', 'doughnut', { labels: catArr.map(x => x[0]), datasets: [{ data: catArr.map(x => x[1]), backgroundColor: CLR, borderWidth: 0 }] }, { cutout: '62%' });
+
+            // P1 趨勢
+            let cum = 0;
+            const cumD = months.map(m => { cum += (monAct[m] || 0); return cum; });
+            mkChart('c10', 'bar', { labels: months, datasets: [{ type: 'line', label: '累計費用', data: cumD, borderColor: CLR[1], borderWidth: 2.5, tension: .35, fill: false, yAxisID: 'y1', pointRadius: 3 }, { type: 'bar', label: '當月費用', data: months.map(m => monAct[m] || 0), backgroundColor: 'rgba(99,102,241,.75)', borderRadius: 4, yAxisID: 'y' }] }, { scales: { y: { position: 'left' }, y1: { position: 'right', grid: { drawOnChartArea: false } } } });
+            const momD = months.map((m, i) => { if (i === 0) return 0; const prev = monAct[months[i - 1]] || 0; const cur = monAct[m] || 0; return prev > 0 ? (cur - prev) / prev * 100 : 0; });
+            mkChart('c11', 'line', { labels: months, datasets: [{ label: 'MoM增長率(%)', data: momD, borderColor: CLR[2], backgroundColor: 'rgba(245,158,11,.1)', fill: true, tension: .4, pointRadius: 4 }] }, { plugins: { annotation: {} } });
+            const ins = document.getElementById('t-ins');
+            ins.innerHTML = '';
+            const maxMom = Math.max(...momD); const maxM = months[momD.indexOf(maxMom)];
+            const minMom = Math.min(...momD); const minM = months[momD.indexOf(minMom)];
+            [{ txt: `費用高峰月：${maxM}，環比增長 ${maxMom.toFixed(1)}%，建議核查是否屬季節性或異常支出。` }, { txt: `費用低谷月：${minM}，環比 ${minMom.toFixed(1)}%，可能為淡季或費用遞延。` }, { txt: `全年累計費用：${fmt(totalAct)}，年均月費用 ${fmt(totalAct / Math.max(months.length, 1))}。` }, { txt: `預算使用率 ${budRate.toFixed(1)}%，${budRate > 100 ? '已超支，建議即刻複審剩餘季度預算。' : '仍在控制範圍，發揮剩餘預算提升效益。'}` }].forEach(({ txt }) => { const li = document.createElement('li'); li.textContent = txt; ins.appendChild(li); });
+
+            // P2 執行比較
+            mkChart('c20', 'bar', { labels: catArr.map(x => x[0]), datasets: [{ label: '實際費用', data: catArr.map(x => x[1]), backgroundColor: 'rgba(236,72,153,.8)', borderRadius: 4 }, { label: '預算', data: catArr.map(x => catBud[x[0]] || 0), backgroundColor: 'rgba(255,255,255,.1)', borderRadius: 4 }] });
+            const ovTb = document.getElementById('ov-tb'); ovTb.innerHTML = '';
+            overspend.slice(0, 5).forEach(x => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${x.cat}</td><td style="color:#fca5a5;text-align:right">+${fmt(x.d)}</td><td style="color:#fca5a5;text-align:right">+${x.pct.toFixed(1)}%</td>`; ovTb.appendChild(tr); });
+            const wfLabels = ['預算基準', ...catArr.map(x => x[0]), '最終費用'];
+            const wfDiff = catArr.map(([cat, act]) => act - (catBud[cat] || 0));
+            const wfColors = ['rgba(99,102,241,.6)', ...wfDiff.map(d => d > 0 ? 'rgba(239,68,68,.7)' : 'rgba(16,185,129,.7)'), 'rgba(99,102,241,.6)'];
+            mkChart('c21', 'bar', { labels: wfLabels, datasets: [{ label: '差異額', data: [totalBud, ...wfDiff, totalAct], backgroundColor: wfColors, borderRadius: 4 }] }, { plugins: { legend: { display: false } } });
+
+            // P3 預算追蹤
+            mkChart('c30', 'doughnut', { labels: ['已消耗', '剩餘'], datasets: [{ data: [totalAct, Math.max(0, totalBud - totalAct)], backgroundColor: budRate > 100 ? [CLR[3], 'rgba(30,41,59,.8)'] : [CLR[1], 'rgba(30,41,59,.8)'], borderWidth: 0 }] }, { cutout: '80%', plugins: { legend: { display: false } } });
+            document.getElementById('g-val').textContent = budRate.toFixed(1) + '%';
+            mkChart('c31', 'bar', { labels: depts, datasets: [{ label: '實際', data: depts.map(d => deptAct[d] || 0), backgroundColor: 'rgba(139,92,246,.8)', borderRadius: 4 }, { label: '預算', data: depts.map(d => deptBud[d] || 0), backgroundColor: 'rgba(139,92,246,.2)', borderRadius: 4 }] }, { indexAxis: 'y' });
+            const pl = document.getElementById('prog-list'); pl.innerHTML = '';
+            catArr.forEach(([cat, act]) => {
+                const bud = catBud[cat] || 0; const pct = bud > 0 ? Math.min(act / bud * 100, 150) : 0;
+                const clr = pct > 125 ? CLR[3] : pct > 100 ? CLR[2] : CLR[1];
+                pl.innerHTML += `<div class="prog-row"><div class="prog-lbl">${cat}</div><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(pct, 100)}%;background:${clr}"></div></div><div class="prog-val" style="color:${clr}">${pct.toFixed(0)}%</div></div>`;
+            });
+
+            // P4 費用結構
+            mkChart('c40', 'doughnut', { labels: catArr.map(x => x[0]), datasets: [{ data: catArr.map(x => x[1]), backgroundColor: CLR, borderWidth: 0 }] }, { cutout: '58%' });
+            mkChart('c41', 'polarArea', { labels: depts, datasets: [{ data: depts.map(d => deptAct[d] || 0), backgroundColor: CLR.map(c => c + '99'), borderWidth: 1, borderColor: 'rgba(30,41,59,.8)' }] }, { scales: { r: { grid: { color: 'rgba(255,255,255,.08)' }, ticks: { backdropColor: 'transparent' } } } });
+            const cats = catArr.map(x => x[0]);
+            const stackDS = cats.map((cat, i) => ({ label: cat, data: months.map(m => { return data.filter(d => new Date(d.Date).toISOString().substring(0, 7) === m && d.Category === cat).reduce((s, r) => s + Number(r.Actual_Amount || 0), 0); }), backgroundColor: CLR[i % CLR.length], stack: 's' }));
+            mkChart('c42', 'bar', { labels: months, datasets: stackDS }, { scales: { x: { stacked: true }, y: { stacked: true } } });
+
+            // P5 部門專案
+            const projs = [...new Set(data.map(d => d.Project))].slice(0, 8);
+            mkChart('c50', 'bar', { labels: projs, datasets: depts.map((dept, i) => ({ label: dept, data: projs.map(p => data.filter(d => d.Department === dept && d.Project === p).reduce((s, r) => s + Number(r.Actual_Amount || 0), 0)), backgroundColor: CLR[i % CLR.length] + 'cc', stack: 's' })) }, { indexAxis: 'y', scales: { x: { stacked: true }, y: { stacked: true } } });
+            const dtb = document.getElementById('dept-tb'); dtb.innerHTML = '';
+            depts.forEach(dept => {
+                const act = deptAct[dept] || 0; const bud = deptBud[dept] || 0; const rate = bud > 0 ? act / bud * 100 : 0;
+                const badge = rate > 110 ? '<span class="badge b-r">超支</span>' : rate > 100 ? '<span class="badge b-w">略超</span>' : '<span class="badge b-g">正常</span>';
+                dtb.innerHTML += `<tr><td>${dept}</td><td>${fmt(act)}</td><td>${fmt(bud)}</td><td>${rate.toFixed(1)}%</td><td>${badge}</td></tr>`;
+            });
+            const projAct = aggBy(data, 'Project', 'Actual_Amount');
+            const projArr = Object.entries(projAct).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            mkChart('c51', 'bar', { labels: projArr.map(x => x[0]), datasets: [{ label: '費用', data: projArr.map(x => x[1]), backgroundColor: CLR.map(c => c + 'bb'), borderRadius: 4 }] }, { indexAxis: 'y', plugins: { legend: { display: false } } });
+
+            // P6 異常偵測
+            const anomTb = document.querySelector('#anom-tb tbody'); anomTb.innerHTML = '';
+            let sev = { r: 0, w: 0, g: 0 };
+            data.forEach(d => {
+                const act = Number(d.Actual_Amount || 0); const bud = Number(d.Budget_Amount || 0);
+                if (bud <= 0) return;
+                const rate = (act - bud) / bud * 100;
+                if (rate <= 0) return;
+                const m = new Date(d.Date).toISOString().substring(0, 7);
+                let badge, lvl;
+                if (rate > 25) { badge = '<span class="badge b-r">🔴 嚴重</span>'; lvl = 'r'; sev.r++; }
+                else if (rate > 10) { badge = '<span class="badge b-w">🟡 警告</span>'; lvl = 'w'; sev.w++; }
+                else { badge = '<span class="badge b-g">🟢 輕微</span>'; lvl = 'g'; sev.g++; }
+                anomTb.innerHTML += `<tr><td>${m}</td><td>${d.Department}</td><td>${d.Category}</td><td>${fmt(act)}</td><td>${fmt(bud)}</td><td style="color:${rate > 25 ? '#fca5a5' : rate > 10 ? '#fcd34d' : '#6ee7b7'}">+${rate.toFixed(1)}%</td><td>${badge}</td></tr>`;
+            });
+            document.getElementById('a0').textContent = sev.r;
+            document.getElementById('a1').textContent = sev.w;
+            document.getElementById('a2').textContent = sev.g;
+
+            // P7 What-If 模擬
+            const sliders = document.getElementById('sliders');
+            if (!sliders.dataset.init) {
+                sliders.dataset.init = '1';
+                const sliderCats = catArr.slice(0, 6);
+                sliderCats.forEach(([cat]) => {
+                    const row = document.createElement('div'); row.className = 'slider-row';
+                    row.innerHTML = `<div class="slider-lbl">${cat}</div><input type="range" min="-30" max="30" value="0" step="1" data-cat="${cat}" class="sim-slider"><div class="slider-val" id="sv-${cat}">0%</div>`;
+                    sliders.appendChild(row);
+                });
+                document.querySelectorAll('.sim-slider').forEach(sl => {
+                    sl.addEventListener('input', () => updateSim(data, catAct, catBud, totalBud));
+                });
+            }
+            updateSim(data, catAct, catBud, totalBud);
+
+            // P8 成本效益
+            const avgEmpPerRow = totalEmp / Math.max(data.length, 1);
+            const perHead = avgEmpPerRow > 0 ? totalAct / (data.length * avgEmpPerRow) : 0;
+            const maxCatVal = catArr[0] ? catArr[0][1] : 0;
+            const concentration = totalAct > 0 ? maxCatVal / totalAct * 100 : 0;
+            document.getElementById('r0').textContent = '-- ';
+            document.getElementById('r1').textContent = fmt(perHead);
+            document.getElementById('r2').textContent = concentration.toFixed(1) + '%';
+            document.getElementById('r3').textContent = fmt(totalAct / Math.max(months.length, 1));
+            const empByM = months.map(m => { const rows = data.filter(d => new Date(d.Date).toISOString().substring(0, 7) === m); const emp = rows.reduce((s, r) => s + Number(r.Employee_Count || 0), 0); const act = rows.reduce((s, r) => s + Number(r.Actual_Amount || 0), 0); return emp > 0 ? act / emp : 0; });
+            mkChart('c80', 'line', { labels: months, datasets: [{ label: '人均月費用', data: empByM, borderColor: CLR[0], backgroundColor: 'rgba(99,102,241,.1)', fill: true, tension: .4 }] });
+            mkChart('c81', 'radar', { labels: catArr.slice(0, 6).map(x => x[0]), datasets: [{ label: '實際費用佔比', data: catArr.slice(0, 6).map(x => x[1] / totalAct * 100), backgroundColor: 'rgba(99,102,241,.2)', borderColor: CLR[0], pointBackgroundColor: CLR[0] }, { label: '預算佔比', data: catArr.slice(0, 6).map(x => (catBud[x[0]] || 0) / totalBud * 100), backgroundColor: 'rgba(16,185,129,.15)', borderColor: CLR[1], pointBackgroundColor: CLR[1] }] }, { scales: { r: { grid: { color: 'rgba(255,255,255,.08)' }, ticks: { backdropColor: 'transparent' } } } });
+        }
+
+        function updateSim(data, catAct, catBud, totalBud) {
+            const sliders = document.querySelectorAll('.sim-slider');
+            let simTotal = 0;
+            const catKeys = Object.keys(catAct);
+            catKeys.forEach(cat => { simTotal += catAct[cat] || 0; });
+            sliders.forEach(sl => {
+                const cat = sl.dataset.cat; const pct = Number(sl.value) / 100;
+                const orig = catAct[cat] || 0; const adj = orig * pct;
+                simTotal += adj;
+                const lbl = document.getElementById('sv-' + cat);
+                if (lbl) { lbl.textContent = (pct >= 0 ? '+' : '') + Number(sl.value) + '%'; lbl.style.color = pct > 0 ? '#fca5a5' : pct < 0 ? '#6ee7b7' : '#94a3b8'; }
+            });
+            const totalAct = Object.values(catAct).reduce((s, v) => s + v, 0);
+            const diff = simTotal - totalAct; const simRate = totalBud > 0 ? simTotal / totalBud * 100 : 0;
+            document.getElementById('sim-tot').textContent = fmt(simTotal);
+            document.getElementById('sim-diff').textContent = (diff >= 0 ? '+' : '') + fmt(diff);
+            document.getElementById('sim-diff').style.color = diff > 0 ? '#fca5a5' : '#6ee7b7';
+            document.getElementById('sim-rate').textContent = simRate.toFixed(1) + '%';
+            document.getElementById('sim-rem').textContent = fmt(totalBud - simTotal);
+            document.getElementById('sim-rem').style.color = simTotal > totalBud ? '#fca5a5' : '#6ee7b7';
+            mkChart('c70', 'bar', { labels: ['實際費用', '模擬費用', '年度預算'], datasets: [{ label: '金額', data: [totalAct, simTotal, totalBud], backgroundColor: ['rgba(99,102,241,.7)', simTotal > totalBud ? 'rgba(239,68,68,.7)' : 'rgba(16,185,129,.7)', 'rgba(148,163,184,.4)'], borderRadius: 5 }] }, { plugins: { legend: { display: false } } });
+        }
+
+        // === 資料上傳 ===
+        document.getElementById('fu').addEventListener('change', function (e) {
+            const file = e.target.files[0]; if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'csv') {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    const lines = ev.target.result.trim().split('\n');
+                    const headers = lines[0].split(',').map(h => h.trim());
+                    rawData = lines.slice(1).map(line => {
+                        const vals = line.split(','); const obj = {};
+                        headers.forEach((h, i) => obj[h] = (vals[i] || '').trim());
+                        return obj;
+                    }).filter(r => r.Date && r.Category);
+                    initFilters(rawData);
+                    runFilters();
+                };
+                reader.readAsText(file, 'UTF-8');
+            } else {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    const wb = XLSX.read(ev.target.result, { type: 'array' });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    rawData = XLSX.utils.sheet_to_json(ws).filter(r => r.Date && r.Category);
+                    initFilters(rawData);
+                    runFilters();
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        function resetData() { 
+            rawData = [...defaultData]; 
+            initFilters(rawData);
+            runFilters();
+            document.getElementById('uinfo').textContent = '✅ 已重設為範例資料 (44筆)'; 
+        }
+
+        // === 初始化 ===
+        resetData();
+    </script>
+</body>
+
+</html>

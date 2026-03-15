@@ -1,0 +1,8 @@
+*.pdf
+*.xlsx
+.gemini/
+.DS_Store
+Thumbs.db
+task.md
+implementation_plan.md
+walkthrough.md
