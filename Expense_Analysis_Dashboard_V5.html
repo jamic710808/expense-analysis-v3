@@ -7,6 +7,7 @@
   <title>企業費用分析儀表板 V5</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -1252,6 +1253,19 @@
       flex-shrink: 0
     }
 
+    .ai-shot-row {
+      margin-bottom: 8px;
+      font-size: .75rem;
+      color: var(--tx2)
+    }
+
+    .ai-shot-row label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer
+    }
+
     .ai-input-row {
       display: flex;
       gap: 8px;
@@ -1641,6 +1655,17 @@
     #aiFloatBtn { position:fixed; right:0; bottom:80px; z-index:490; background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; border:none; border-radius:14px 0 0 14px; padding:11px 9px; cursor:pointer; font-size:18px; box-shadow:-2px 2px 12px rgba(99,102,241,.5); transition:all .25s; writing-mode:vertical-rl; display:flex; flex-direction:column; align-items:center; gap:4px; }
     #aiFloatBtn:hover { background:linear-gradient(135deg,#4f46e5,#4338ca); padding-right:13px; }
     .ai-float-lbl { font-size:.68rem; letter-spacing:.05em; writing-mode:vertical-rl; margin-top:2px; }
+
+    /* ── FOOTER ──────────────────────────────────── */
+    .pg-footer {
+      margin-top: 16px;
+      padding: 10px;
+      text-align: center;
+      color: var(--tx3);
+      font-size: .72rem;
+      border-top: 1px solid var(--bd);
+      letter-spacing: .03em
+    }
   </style>
 </head>
 
@@ -1749,10 +1774,15 @@
           </div>
           <div class="ai-cfg-row">
             <label class="ai-cfg-lbl">CORS 代理</label>
-            <select id="aiProxyInline">
-              <option value="0">關閉（直連）</option>
-              <option value="1">本機代理（:8080）</option>
+            <select id="aiProxyInline" onchange="onProxyModeChange()">
+              <option value="off">關閉（直連）</option>
+              <option value="local">本機代理（:8080）</option>
+              <option value="custom">自訂代理 URL</option>
             </select>
+          </div>
+          <div class="ai-cfg-row" id="aiProxyUrlRow" style="display:none">
+            <label class="ai-cfg-lbl">代理 URL</label>
+            <input id="aiProxyUrl" type="text" placeholder="https://your-app.vercel.app/api/proxy">
           </div>
           <div class="ai-cfg-row" id="aiInlineFmtRow" style="display:none">
             <label class="ai-cfg-lbl">API 格式</label>
@@ -1791,6 +1821,9 @@
 
     <!-- Footer -->
     <div class="ai-footer">
+      <div class="ai-shot-row">
+        <label><input type="checkbox" id="aiAttachShot"> 📸 附加當前頁面截圖（需 Vision 模型）</label>
+      </div>
       <div class="ai-input-row">
         <textarea class="ai-input" id="aiInput" placeholder="輸入追問…（Shift+Enter 換行，Enter 送出）" rows="1"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFollowup()}"
@@ -2864,56 +2897,64 @@
         baseUrl: 'https://api.openai.com/v1',
         models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o1-mini', 'o3-mini'],
         defaultModel: 'gpt-4o',
-        apiFormat: 'openai'
+        apiFormat: 'openai',
+        visionModels: ['gpt-4o', 'gpt-4-turbo']
       },
       anthropic: {
         name: 'Anthropic',
         baseUrl: 'https://api.anthropic.com',
         models: ['claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
         defaultModel: 'claude-sonnet-4-6',
-        apiFormat: 'anthropic'
+        apiFormat: 'anthropic',
+        visionModels: ['claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001']
       },
       deepseek: {
         name: 'DeepSeek',
         baseUrl: 'https://api.deepseek.com/v1',
         models: ['deepseek-chat', 'deepseek-reasoner'],
         defaultModel: 'deepseek-chat',
-        apiFormat: 'openai'
+        apiFormat: 'openai',
+        visionModels: []
       },
       minimax: {
         name: 'MiniMax',
         baseUrl: 'https://api.minimaxi.com/v1',
         models: ['MiniMax-M2.7', 'MiniMax-M2.7-highspeed', 'MiniMax-M2.5', 'MiniMax-M2.5-highspeed', 'MiniMax-M2.1', 'MiniMax-M2.1-highspeed'],
         defaultModel: 'MiniMax-M2.7',
-        apiFormat: 'openai'
+        apiFormat: 'openai',
+        visionModels: []
       },
       siliconflow: {
         name: '硅基流動',
         baseUrl: 'https://api.siliconflow.cn/v1',
         models: ['Qwen/Qwen2.5-72B-Instruct', 'deepseek-ai/DeepSeek-V3', 'THUDM/glm-4-9b-chat', 'Pro/Qwen/Qwen2.5-7B-Instruct', 'Qwen/Qwen2.5-7B-Instruct'],
         defaultModel: 'Qwen/Qwen2.5-72B-Instruct',
-        apiFormat: 'openai'
+        apiFormat: 'openai',
+        visionModels: []
       },
       openrouter: {
         name: 'OpenRouter',
         baseUrl: 'https://openrouter.ai/api/v1',
         models: ['anthropic/claude-sonnet-4-6', 'openai/gpt-4o', 'deepseek/deepseek-chat', 'google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b-instruct'],
         defaultModel: 'deepseek/deepseek-chat',
-        apiFormat: 'openai'
+        apiFormat: 'openai',
+        visionModels: ['anthropic/claude-sonnet-4-6', 'openai/gpt-4o', 'google/gemini-2.5-flash']
       },
       ollama: {
         name: 'Ollama（本地）',
         baseUrl: 'http://localhost:11434/v1',
         models: ['llama3.3', 'qwen2.5:72b', 'deepseek-r1:70b', 'gemma3:27b', 'mistral'],
         defaultModel: 'llama3.3',
-        apiFormat: 'openai'
+        apiFormat: 'openai',
+        visionModels: []
       },
       custom: {
         name: '自訂端點',
         baseUrl: '',
         models: [],
         defaultModel: '',
-        apiFormat: 'openai'
+        apiFormat: 'openai',
+        visionModels: []
       }
     };
 
@@ -2931,7 +2972,7 @@
       useStream: true,
       savedKeys: {},
       savedBaseUrls: {},
-      useCorsProxy: false,
+      corsProxyMode: 'off', corsProxyUrl: '',  // off | local | custom
       apiFormat: 'openai',
       maxTokens: 4096
     };
@@ -2976,7 +3017,10 @@
           if (parsed.model) aiCfg.model = parsed.model;
           if (parsed.temperature !== undefined) aiCfg.temperature = parsed.temperature;
           if (parsed.useStream !== undefined) aiCfg.useStream = parsed.useStream;
-          if (parsed.useCorsProxy !== undefined) aiCfg.useCorsProxy = parsed.useCorsProxy;
+          // 向後相容：舊版 boolean useCorsProxy → 新版 string mode
+          if (parsed.corsProxyMode) aiCfg.corsProxyMode = parsed.corsProxyMode;
+          else if (parsed.useCorsProxy === true) aiCfg.corsProxyMode = 'local';
+          if (parsed.corsProxyUrl) aiCfg.corsProxyUrl = parsed.corsProxyUrl;
           if (parsed.apiFormat) aiCfg.apiFormat = parsed.apiFormat;
           aiCfg.apiKey = aiCfg.savedKeys[aiCfg.provider] || '';
         }
@@ -3000,7 +3044,7 @@
       document.getElementById('aiTemp').value = aiCfg.temperature;
       document.getElementById('aiTempLbl').textContent = aiCfg.temperature.toFixed(2);
       document.getElementById('aiUseStream').checked = aiCfg.useStream !== false;
-      document.getElementById('aiCorsProxy').value = aiCfg.useCorsProxy ? '1' : '0';
+      if (document.getElementById('aiCorsProxy')) document.getElementById('aiCorsProxy').value = aiCfg.corsProxyMode || 'off';
       document.getElementById('aiApiFormat').value = aiCfg.apiFormat || 'openai';
 
       updateModelList();
@@ -3039,7 +3083,7 @@
       aiCfg.model = getModelValue();
       aiCfg.temperature = parseFloat(document.getElementById('aiTemp').value);
       aiCfg.useStream = document.getElementById('aiUseStream').checked;
-      aiCfg.useCorsProxy = document.getElementById('aiCorsProxy').value === '1';
+      if (document.getElementById('aiCorsProxy')) aiCfg.corsProxyMode = document.getElementById('aiCorsProxy').value || 'off';
       aiCfg.apiFormat = document.getElementById('aiApiFormat').value;
 
       // 同步到分組儲存
@@ -3100,7 +3144,6 @@
       const endpoint = document.getElementById('aiEndpoint').value.trim();
       const apiKey = document.getElementById('aiKey').value.trim();
       const model = getModelValue();
-      const useProxy = document.getElementById('aiCorsProxy').value === '1';
       const statusEl = document.getElementById('aiTestStatus');
 
       if (!endpoint || !apiKey || !model) {
@@ -3111,7 +3154,7 @@
 
       try {
         let testUrl = endpoint.endsWith('/chat/completions') ? endpoint : `${endpoint.replace(/\/+$/, '')}/chat/completions`;
-        if (useProxy) testUrl = `http://localhost:8080/proxy?url=${encodeURIComponent(testUrl)}`;
+        testUrl = wrapWithProxy(testUrl);
 
         const res = await fetch(testUrl, {
           method: 'POST',
@@ -3199,16 +3242,29 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       aiHistory.push({ role: 'user', content: userMsg });
       setupQuickReplies(pageId);
 
+      // 截圖（可選）
+      let imgB64 = null;
+      if (document.getElementById('aiAttachShot')?.checked) {
+        const prov = AI_PROVIDERS[aiCfg.provider];
+        if (!prov?.visionModels?.length || !prov.visionModels.includes(aiCfg.model)) {
+          showToast('⚠️ 當前模型不支援 Vision，已忽略截圖', 'info');
+        } else {
+          showToast('📸 截圖中…', 'info');
+          imgB64 = await captureCurrentTab();
+        }
+      }
+
       await callAI(msgs,
         (chunk) => { appendToLoading(loadId, chunk); },
         (full) => { finalizeLoading(loadId, full); aiHistory.push({ role: 'assistant', content: full }); updateRoundLabel(); setupQuickReplies(pageId); },
-        (err) => { replaceLoading(loadId, '❌ 錯誤：' + escHtml(err)); setAIStatus('error'); }
+        (err) => { replaceLoading(loadId, '❌ 錯誤：' + escHtml(err)); setAIStatus('error'); },
+        imgB64
       );
     }
 
     // ── Core Dispatcher ──────────────────────────────────────────────────────────
     let aiAbortCtrl = null;
-    async function callAI(messages, onChunk, onDone, onError) {
+    async function callAI(messages, onChunk, onDone, onError, imageBase64 = null) {
       if (aiStreaming) { showToast('AI 正在回應中…', 'info'); return; }
       aiStreaming = true;
       aiAbortCtrl = new AbortController();
@@ -3223,9 +3279,9 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
         const isAnthropic = (p === 'anthropic') || (p === 'custom' && aiCfg.apiFormat === 'anthropic');
 
         if (isAnthropic) {
-          await _callAnthropic(messages, onChunk, onDone, onError);
+          await _callAnthropic(messages, onChunk, onDone, onError, imageBase64);
         } else {
-          await _callOpenAI(messages, onChunk, onDone, onError);
+          await _callOpenAI(messages, onChunk, onDone, onError, imageBase64);
         }
       } catch (err) {
         if (err.name === 'AbortError') {
@@ -3248,19 +3304,47 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       if (aiAbortCtrl) aiAbortCtrl.abort();
     }
 
-    async function _callOpenAI(messages, onChunk, onDone, onError) {
+    async function captureCurrentTab() {
+      if (typeof html2canvas === 'undefined') {
+        showToast('html2canvas 載入失敗', 'err'); return null;
+      }
+      const sec = document.getElementById(aiCurrentPage);
+      if (!sec) return null;
+      try {
+        const canvas = await html2canvas(sec, {
+          scale: 0.8,
+          backgroundColor: document.documentElement.getAttribute('data-theme') === 'light' ? '#F5F0EB' : '#0f1117',
+          useCORS: true, logging: false
+        });
+        return canvas.toDataURL('image/png');
+      } catch (e) {
+        showToast('截圖失敗：' + e.message, 'err'); return null;
+      }
+    }
+
+    async function _callOpenAI(messages, onChunk, onDone, onError, imageBase64 = null) {
       const p = aiCfg.provider;
       const useCustomUrl = p === 'custom' || p === 'openrouter' || p === 'ollama';
       const baseUrl = useCustomUrl ? (aiCfg.savedBaseUrls[p] || aiCfg.endpoint || AI_PROVIDERS[p]?.baseUrl || '') : AI_PROVIDERS[p].baseUrl;
-      let fetchUrl = `${baseUrl}/chat/completions`;
+      let fetchUrl = wrapWithProxy(`${baseUrl}/chat/completions`);
 
-      if (aiCfg.useCorsProxy) {
-        fetchUrl = `http://localhost:8080/proxy?url=${encodeURIComponent(fetchUrl)}`;
+      // 若附加截圖，將最後一條 user 訊息改為 multimodal content
+      let msgs = messages;
+      if (imageBase64) {
+        msgs = messages.map((m, i) => {
+          if (i === messages.length - 1 && m.role === 'user') {
+            return { role: 'user', content: [
+              { type: 'text', text: m.content },
+              { type: 'image_url', image_url: { url: imageBase64 } }
+            ]};
+          }
+          return m;
+        });
       }
 
       const bodyObj = {
         model: aiCfg.model,
-        messages,
+        messages: msgs,
         temperature: aiCfg.temperature,
         max_tokens: aiCfg.maxTokens || 4096,
         stream: aiCfg.useStream
@@ -3323,17 +3407,23 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       }
     }
 
-    async function _callAnthropic(messages, onChunk, onDone, onError) {
+    async function _callAnthropic(messages, onChunk, onDone, onError, imageBase64 = null) {
       const p = aiCfg.provider;
       const baseUrl = (p === 'anthropic') ? AI_PROVIDERS.anthropic.baseUrl : aiCfg.endpoint;
-      let fetchUrl = `${baseUrl}/v1/messages`;
-
-      if (aiCfg.useCorsProxy) {
-        fetchUrl = `http://localhost:8080/proxy?url=${encodeURIComponent(fetchUrl)}`;
-      }
+      let fetchUrl = wrapWithProxy(`${baseUrl}/v1/messages`);
 
       const sysMsg = messages.find(m => m.role === 'system')?.content || '';
       const userMsgs = messages.filter(m => m.role !== 'system');
+
+      // 若附加截圖，將最後一條 user 訊息改為 multimodal content
+      if (imageBase64 && userMsgs.length) {
+        const last = userMsgs[userMsgs.length - 1];
+        last.content = [
+          { type: 'image', source: { type: 'base64', media_type: 'image/png',
+            data: imageBase64.replace(/^data:image\/png;base64,/, '') } },
+          { type: 'text', text: last.content }
+        ];
+      }
 
       const resp = await fetch(fetchUrl, {
         method: 'POST',
@@ -3462,6 +3552,15 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       setAIStatus('busy');
       updateTokenHint();
 
+      // 截圖（可選）
+      let imgB64 = null;
+      if (document.getElementById('aiAttachShot')?.checked) {
+        const prov = AI_PROVIDERS[aiCfg.provider];
+        if (prov?.visionModels?.length && prov.visionModels.includes(aiCfg.model)) {
+          imgB64 = await captureCurrentTab();
+        }
+      }
+
       const loadId = addAILoading();
 
       const msgs = [
@@ -3472,7 +3571,8 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       await callAI(msgs,
         (data) => { appendToLoading(loadId, data); },
         (full) => { finalizeLoading(loadId, full); aiHistory.push({ role: 'assistant', content: full }); updateRoundLabel(); saveAIChatCache(); },
-        (err) => { replaceLoading(loadId, '❌ 錯誤：' + escHtml(err)); setAIStatus('error'); }
+        (err) => { replaceLoading(loadId, '❌ 錯誤：' + escHtml(err)); setAIStatus('error'); },
+        imgB64
       );
     }
 
@@ -3690,6 +3790,25 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       if (arrow) arrow.textContent = open ? '▸' : '▾';
     }
 
+    function onProxyModeChange() {
+      const sel = document.getElementById('aiProxyInline');
+      const row = document.getElementById('aiProxyUrlRow');
+      if (!sel || !row) return;
+      row.style.display = sel.value === 'custom' ? 'flex' : 'none';
+    }
+
+    /* 統一回傳「最終要 fetch 的 URL」：依代理模式包裝原始端點 */
+    function wrapWithProxy(originalUrl) {
+      if (aiCfg.corsProxyMode === 'local') {
+        return `http://localhost:8080/proxy?url=${encodeURIComponent(originalUrl)}`;
+      }
+      if (aiCfg.corsProxyMode === 'custom' && aiCfg.corsProxyUrl) {
+        const base = aiCfg.corsProxyUrl.replace(/\/$/, '');
+        return `${base}?url=${encodeURIComponent(originalUrl)}`;
+      }
+      return originalUrl;
+    }
+
     function saveAIInlineCfg() {
       const provSel = document.getElementById('aiProvInline');
       const keyEl = document.getElementById('aiKeyInline');
@@ -3714,7 +3833,9 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       if (tempEl) aiCfg.temperature = parseFloat(tempEl.value) || 0.3;
       if (maxTokEl) aiCfg.maxTokens = parseInt(maxTokEl.value) || 4096;
       if (streamEl) aiCfg.useStream = streamEl.checked;
-      if (proxyEl) aiCfg.useCorsProxy = proxyEl.value === '1';
+      if (proxyEl) aiCfg.corsProxyMode = proxyEl.value || 'off';
+      const proxyUrlEl2 = document.getElementById('aiProxyUrl');
+      if (proxyUrlEl2) aiCfg.corsProxyUrl = proxyUrlEl2.value.trim();
       if (fmtEl) aiCfg.apiFormat = fmtEl.value;
 
       saveAICfgToStorage();
@@ -3749,7 +3870,10 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       const streamEl = document.getElementById('aiStreamInline');
       if (streamEl) streamEl.checked = aiCfg.useStream !== false;
       const proxyEl = document.getElementById('aiProxyInline');
-      if (proxyEl) proxyEl.value = aiCfg.useCorsProxy ? '1' : '0';
+      if (proxyEl) proxyEl.value = aiCfg.corsProxyMode || 'off';
+      const proxyUrlEl = document.getElementById('aiProxyUrl');
+      if (proxyUrlEl) proxyUrlEl.value = aiCfg.corsProxyUrl || '';
+      if (typeof onProxyModeChange === 'function') onProxyModeChange();
     }
 
     // ── Quick-send helpers ───────────────────────────────────────────────────────
