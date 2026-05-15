@@ -1,0 +1,14 @@
+{
+  "name": "expense-analysis-dashboard",
+  "version": "5.0.0",
+  "description": "企業費用分析儀表板 V5 — Vercel 部署版（含 AI CORS 代理）",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}

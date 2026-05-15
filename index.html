@@ -1776,6 +1776,7 @@
             <label class="ai-cfg-lbl">CORS 代理</label>
             <select id="aiProxyInline" onchange="onProxyModeChange()">
               <option value="off">關閉（直連）</option>
+              <option value="self">本站 /api/proxy（Vercel）</option>
               <option value="local">本機代理（:8080）</option>
               <option value="custom">自訂代理 URL</option>
             </select>
@@ -2972,7 +2973,7 @@
       useStream: true,
       savedKeys: {},
       savedBaseUrls: {},
-      corsProxyMode: 'off', corsProxyUrl: '',  // off | local | custom
+      corsProxyMode: 'self', corsProxyUrl: '',  // off | local | self | custom
       apiFormat: 'openai',
       maxTokens: 4096
     };
@@ -3256,7 +3257,7 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
 
       await callAI(msgs,
         (chunk) => { appendToLoading(loadId, chunk); },
-        (full) => { finalizeLoading(loadId, full); aiHistory.push({ role: 'assistant', content: full }); updateRoundLabel(); setupQuickReplies(pageId); },
+        (full) => { finalizeLoading(loadId, full); aiHistory.push({ role: 'assistant', content: full }); updateRoundLabel(); setupQuickReplies(pageId, full); },
         (err) => { replaceLoading(loadId, '❌ 錯誤：' + escHtml(err)); setAIStatus('error'); },
         imgB64
       );
@@ -3584,17 +3585,42 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
       document.querySelectorAll('.ai-qr').forEach(el => el.remove());
     }
 
-    function setupQuickReplies(pageId) {
-      // Remove existing QR
+    function setupQuickReplies(pageId, aiResponse) {
       document.querySelectorAll('.ai-qr').forEach(el => el.remove());
-      const qrs = PAGE_QR[pageId];
-      if (!qrs) return;
+      const qrs = aiResponse ? generateDynamicQR(pageId, aiResponse) : (PAGE_QR[pageId] || []);
+      if (!qrs.length) return;
       const body = document.getElementById('aiBody');
       const div = document.createElement('div');
       div.className = 'ai-qr';
       div.innerHTML = qrs.map(q => `<button class="ai-qr-btn" onclick="sendQuickReply('${escHtml(q).replace(/'/g, '\\\'')}')">${escHtml(q)}</button>`).join('');
       body.appendChild(div);
       body.scrollTop = body.scrollHeight;
+    }
+
+    function generateDynamicQR(pageId, text) {
+      const qrs = new Set();
+      if (/超支|超預算|超過/.test(text))      qrs.add('哪些項目超支最嚴重？請列出前3名並分析根因。');
+      if (/趨勢|增加|成長|上升|攀升/.test(text)) qrs.add('請預測未來2季費用走勢，並給出高低情境區間。');
+      if (/固定|變動|比例/.test(text))         qrs.add('如何調整固定與變動費用比例，以提升財務彈性？');
+      if (/人力|薪資|人事|人員/.test(text))    qrs.add('人力費用的合理標準是多少？與行業基準如何比較？');
+      if (/ROI|效益|回報|報酬/.test(text))     qrs.add('哪些費用項目的 ROI 最需優先改善？請量化說明。');
+      if (/風險|警訊|異常/.test(text))         qrs.add('請列出最緊急的3個費用風險，並建議緩解措施。');
+      if (/建議|優化|改善|調整/.test(text))    qrs.add('請提供30天內可執行的費用優化具體行動計畫。');
+      if (/部門|事業部/.test(text))            qrs.add('各部門費用效率如何量化比較？請用表格整理。');
+      if (/行銷|廣告|推廣/.test(text))         qrs.add('行銷投入的費效比是否合理？與業績貢獻是否匹配？');
+      if (/季節|季節性|Q[1-4]/.test(text))     qrs.add('費用的季節性規律如何影響年度預算配置？');
+      if (/責任中心|利潤中心|成本中心/.test(text)) qrs.add('各責任中心的費用管控績效如何評比？');
+      const fallback = {
+        p0: ['費用結構中最需關注的3個KPI是什麼？', '請生成適合向高層匯報的費用健診摘要。'],
+        p1: ['費用趨勢與收入增長是否同步？哪個月最異常？', '請分析費用波動的主要驅動因素。'],
+        p2: ['各部門費用效率排名，請從高到低列出。', '哪個部門最值得深入稽核？'],
+        p4: ['超支比例最高的預算項目是哪3個？', '預算執行率最低的項目，有哪些成因？'],
+        p10: ['固定費用中哪些可轉為變動計費？', '變動費用與業績的彈性係數如何？'],
+        p12: ['費用投入產出比最高的活動是？', '哪些費用項目沒有產生收入，是否必要保留？'],
+      };
+      (fallback[pageId] || []).forEach(f => { if (qrs.size < 4) qrs.add(f); });
+      qrs.add('用一句話說出最重要的結論，以及最需要立即行動的事項。');
+      return [...qrs].slice(0, 5);
     }
 
     // ── Markdown renderer ────────────────────────────────────────────────────────
@@ -3801,6 +3827,9 @@ ${filterDesc ? '**篩選條件**：' + filterDesc + '\n\n' : ''}${ctx}`;
     function wrapWithProxy(originalUrl) {
       if (aiCfg.corsProxyMode === 'local') {
         return `http://localhost:8080/proxy?url=${encodeURIComponent(originalUrl)}`;
+      }
+      if (aiCfg.corsProxyMode === 'self') {
+        return `/api/proxy?url=${encodeURIComponent(originalUrl)}`;
       }
       if (aiCfg.corsProxyMode === 'custom' && aiCfg.corsProxyUrl) {
         const base = aiCfg.corsProxyUrl.replace(/\/$/, '');
